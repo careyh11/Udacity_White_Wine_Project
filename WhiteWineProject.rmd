@@ -1,0 +1,748 @@
+---
+title: "White Wine Variable Comparison"
+author: "Carey Hack"
+date: March 4, 2021
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(GGally)
+library(knitr)
+library(dplyr)
+theme_set(theme_minimal(10))
+```
+
+```{r echo=FALSE, Load_the_Data, message=FALSE, warning=FALSE}
+# Load the Data
+wineQuality <- read.csv('wineQualityWhites.csv')
+```
+
+# Introduction
+
+The data-set I will be working with for this project is the white wine quality
+data-set provided by Udacity. The following tables will show the thirteen variables
+within the white wine data-sets names (I will add one variable), the structure of
+the variable fields, and a quantile summary of each variable field. As I explore 
+this data I will be focusing on one major question; what makes a quality bottle 
+of wine?
+\
+\
+
+The following code was used to create a Rating variable. I did this for better
+grouping of data and easier viewing. Anything of quality 3, 4, or 5 is assigned
+'Bad'. 6 is Average. 7 is Good. 8 is Great. 9 is Excellent.
+
+```{r, Create_Var_Rating, message=FALSE, warning=FALSE}
+# Add a variable named "Rating" and assign text.
+wineQuality$rating <- ifelse(wineQuality$quality <= 5, 'Bad', ifelse(
+  wineQuality$quality < 7, 'Average', ifelse(
+    wineQuality$quality < 8, 'Good', ifelse(
+      wineQuality$quality < 9, 'Great', 'Excellent'))))
+wineQuality$rating <- ordered(wineQuality$rating,
+                       levels = c('Bad', 'Average', 'Good', 'Great', 
+                                  'Excellent'))
+```
+\
+\
+
+The variables within our list and their names.
+
+```{r echo=FALSE, Data_Intro_Name, message=FALSE, warning=FALSE}
+# Names and only names of variables or columns within data-set.
+names(wineQuality)
+```
+\
+\
+
+The structure of the data frame. We have 4,898 objects with 14 variables, or columns,
+with the respective variables type listed as well.
+```{r echo=FALSE, Data_Intro_Structure, message=FALSE, warning=FALSE}
+# Structure of white wine data
+str(wineQuality)
+```
+\
+\
+
+Below I have a summary of the respective variables shown as quantiles. This data can 
+give us some clues as to what is happening withing our data. For example, under 
+residual.sugar and free.sulfur.dioxide, I have some potential outliers. This can 
+be seen by comparing the min and max value as it relates to the mean. Since these 
+outliers have not pulled the mean to far away from the median, I can assume that 
+any outliers I have do not misrepresent the data. As this is tidy, I fortunately 
+have no NA's.
+
+```{r echo=FALSE, Data_Introduction, message=FALSE, warning=FALSE}
+# Summary of white wine data
+summary(wineQuality)
+```
+\
+\
+
+The below table shows wine count based on rating. Most wines tested on an average 
+of 6(Average) but there are less wines over 6(Average) than below 6(Average).  
+This table below shows I only have 180 wines that would be considered great or 
+excellent. This may help isolate what makes a quality glass of wine moving forward.
+
+```{r echo=FALSE, Table_of_Quality, message=FALSE, warning=FALSE}
+# Total number of wines based on quality.
+table(wineQuality$rating)
+```
+\
+\
+
+# Univariate Plots Section
+
+Exploring the quality by number of samples.
+
+```{r echo=FALSE, Histogram_of_Quality, message=FALSE, warning=FALSE}
+# Histogram of quality.
+ggplot(aes(x = quality), data = wineQuality) +
+  geom_histogram(binwidth = 1, color = 'black', fill = '#F79420') +
+  xlab('Quality of wine.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = 3:9)
+```
+\
+\
+
+Exploring the alcohol content by number of samples.
+
+```{r echo=FALSE, Histogram_of_AC, message=FALSE, warning=FALSE}
+# Bar of alcohol content.
+ggplot(aes(x = alcohol), data = wineQuality) +
+  geom_histogram(binwidth = .5, color = 'black', fill = '#F79420') +
+  xlab('Alcohol content of wine, full range.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(8, 14.5, .5))
+```
+\
+\
+
+Exploring free sulfur dioxide by number of samples.
+
+```{r echo=FALSE, Histogram_of_TSD2, message=FALSE, warning=FALSE}
+# Histogram of free sulfur dioxide content.
+ggplot(aes(x = free.sulfur.dioxide), data = wineQuality) +
+  geom_histogram(binwidth = 5, color = 'black', fill = '#F79420') +
+  xlab('Free sulfur dioxide, range 0 to 75.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 75, 5), lim = c(0, 75))
+```
+\
+\
+
+Exploring total sulfur dioxide by number of samples.
+
+```{r echo=FALSE, Histogram_of_TSD3, message=FALSE, warning=FALSE}
+# Histogram of total sulfur dioxide content.
+ggplot(aes(x = total.sulfur.dioxide), data = wineQuality) +
+  geom_histogram(binwidth = 10, color = 'black', fill = '#F79420') +
+  xlab('Total sulfur dioxide content of wine, range 0 to 275.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 275, 15), lim = c(0, 275))
+```
+\
+\
+
+This table represents the five types of 9(Excellent) quality white wines. It is
+interesting that only five wines earned such recognition out of almost 5000.
+
+```{r echo=FALSE, Top_Table, message=FALSE, warning=FALSE}
+kable(subset(wineQuality, wineQuality$quality > 8))
+```
+\
+\
+
+Exploring pH, I found that as quality rises mean and median of pH also rise while
+the range between min and max decreases.
+
+```{r echo=FALSE, pH_Chart, message=FALSE, warning=FALSE}
+# Quantiles based on pH by quality level.
+by(wineQuality$pH, wineQuality$rating, summary)
+```
+\
+\
+
+This table of free.sulfur.dioxide shows some interesting numbers worthy of further
+investigation. An excellent glass of white wine's min free sulfur dioxide is 
+notably higher than all other areas. As well, the max is significantly lower than
+other rating areas. This tight value range may have the best clues, thus far, as
+to what makes and excellent glass of white wine.
+
+```{r echo=FALSE, Free_Sul_Chart, message=FALSE, warning=FALSE}
+# Quantiles based on free.sulfur.dioxide by quality level.
+by(wineQuality$free.sulfur.dioxide, wineQuality$rating, summary)
+```
+\
+\
+
+This table of total sulfur dioxide as it relates to quality is interesting. Excellent
+glasses of white wine have a much higher min amount than others but with a smaller
+max amount than the other qualities as well. This range seems very specific to 
+higher quality white wine.
+
+```{r echo=FALSE, Tot_sul_Chart, message=FALSE, warning=FALSE}
+# Quantiles based on total.sulfur.dioxide by quality level.
+by(wineQuality$total.sulfur.dioxide, wineQuality$rating, summary)
+```
+\
+\
+
+I can see the same trend in this table of alcohol content, as quality rises, so 
+does alcohol content. This is interesting because alcohol content is decided by
+other variables which are present, such as sugars, and I didn't think one was
+supposed to swallow the wine when considering quality!
+
+```{r echo=FALSE, Table_alcohol_by_quality, message=FALSE, warning=FALSE}
+# Quantiles based on alcohol content by quality level.
+by(wineQuality$alcohol, wineQuality$rating, summary)
+```
+\
+\
+
+# Univariate Analysis
+
+#### What is the structure of your dataset?
+
+I have 4,898 objects with 14 variables, or columns. This is a data-set downloaded
+from Udacity and is extremely tidy. Each value in our variables is of type num
+except quality which in of type int. The "X" variable represents wine name and
+there is no intention to do any coding including this variable.
+
+#### What is/are the main feature(s) of interest in your dataset?
+
+For this project I am interested in what defines a quality glass of wine. I can
+see that alcohol content, sulfur dioxide, pH, and density have interesting trends,
+but I will need to compare these variable further to determine their true interest.
+
+#### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+I believe the variables that have the most dynamic range will help in isolating 
+what variable makes a quality wine glass. Having potential outliers in several 
+variable fields will be the starting point. The variables that have a very small
+range, such as density, may not yield as much meaningful insight. But, as I
+discovered while further exploring, the range of numbers is not an indicator of
+usefulness.
+
+#### Did you create any new variables from existing variables in the dataset?
+
+Yes, I created the variable "rating". I found it useful to add a text phrase to 
+the quality variable. I did this for better grouping of data by quality and for 
+a better viewing experience. This made the data more meaningful versus numbers
+as a metric for quality.
+
+#### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+The observed unusual distributions are in the residual.sugar, free.sulfur.dioxide, and
+total.sulfur.dioxide. I call these unusual due to how far off the max value is from 
+the mean. Though they are unusual, as can be seen from the univariate charts, these
+variables seem to play some part in a high quality glass of white wine. I believe
+as we move forward, the answer will require the merging and viewing of several 
+variable data points in a single chart to the relations of what makes a high quality
+glass of wine.
+\
+\
+
+# Bivariate Plots Section
+
+Scatterplot
+
+```{r echo=FALSE, chart7, warning=FALSE, message=FALSE}
+tmpdata <- subset(wineQuality, select = -c(wineQuality$x, wineQuality$rating))
+ggpairs(tmpdata,
+        ggplot2::aes(color = rating),
+        upper = "blank",
+        axisLabels = 'none')
+```
+\
+\
+
+Histograms of alcohol content as it relates to quality. Each chart is a quality/rating
+level from 3(Bad) to 9(Excellent) showing alcohol content and the portions for the 
+respective quality.
+
+```{r echo=FALSE, Histogram_of_ACtoQ, message=FALSE, warning=FALSE}
+# Histograms of alcohol content as it relates to wine quality.
+ggplot(aes(x = alcohol), data = wineQuality) +
+  geom_histogram(binwidth = .5, color = 'black', fill = '#F79420') +
+  xlab('Alcohol content as it relates to wine rating') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = 8:14.5) +
+  facet_wrap(~rating)
+```
+\
+\
+
+Histograms of residual sugar content as it relates to quality/rating. Each chart 
+has a quality level from 3(Bad) to 9(Excellent) showing residual sugar and the 
+portions for the respective quality/rating. As I am interested in quality wine I 
+have subsetted this chart according to quality/rating greater than 7(Average), or 
+the mean of quality.
+
+```{r echo=FALSE, Histogram_of_RSQuality, message=FALSE, warning=FALSE}
+# Histograms of residual sugar as it relates to wine quality.
+ggplot(aes(x = residual.sugar), data = subset(wineQuality, quality > 6)) +
+  geom_histogram(binwidth = 1, color = 'black', fill = '#F79420') +
+  xlab('Residual sugar as it relates to wine rating') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 20, 5), lim = c(0, 20)) +
+  facet_wrap(~rating)
+```
+\
+\
+
+These histograms show the relation of free sulfur dioxide as it relates to wine
+quality. Each chart has a  quality level from 3(Bad) to 9(Excellent) showing free 
+sulfur dioxide and the portions for the respective quality. As I am interested 
+in quality wine I have subsetted this chart according to quality/rating greater 
+than 6(Average), or the mean of quality.
+
+```{r echo=FALSE, Histogram_of_FSQuality, message=FALSE, warning=FALSE}
+# Histograms of free sulfur dioxide as it relates to wine quality.
+ggplot(aes(x = free.sulfur.dioxide), data = subset(wineQuality, quality > 6)) +
+  geom_histogram(binwidth = 5, color = 'black', fill = '#F79420') +
+  xlab('Free sulfur dioxide as it relates to wine rating') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 289, 20), lim = c(0, 120)) +
+  facet_wrap(~rating)
+```
+\
+\
+
+These histograms show the relation of total sulfur dioxide as it relates to wine
+quality. Each chart has a  quality level from 3(Bad) to 9(Excellent6 showing total 
+sulfur dioxide and the portions for the respective quality. As I am interested 
+in quality wine I have subsetted this chart according to quality/rating greater 
+than 6(Average), or the mean of quality.
+
+```{r echo=FALSE, Histogram_of_TSQuality, message=FALSE, warning=FALSE}
+# Histograms of total sulfur dioxide as it relates to wine quality.
+ggplot(aes(x = free.sulfur.dioxide), data = subset(wineQuality, quality > 6)) +
+  geom_histogram(binwidth = 5, color = 'black', fill = '#F79420') +
+  xlab('Total sulfur dioxide as it relates to wine rating') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 125, 25), lim = c(0, 125)) +
+  facet_wrap(~rating)
+```
+\
+\
+
+This chart shows how the range of total sulfur dioxide shrinks as quality or
+rating increases.
+
+```{r echo=FALSE, Histogram_of_TSD5, message=FALSE, warning=FALSE}
+# Histogram of total sulfur dioxide content.
+ggplot(aes(x = total.sulfur.dioxide, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = 10, color = 'black') +
+  xlab('Total sulfur dioxide content of wine') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 275, 25), lim = c(0, 275))
+```
+\
+\
+
+As above, this chart shows the shrinking range of free sulfur dioxide as quality
+or rating increases.
+
+```{r echo=FALSE, Histogram_of_TSD7, message=FALSE, warning=FALSE}
+# Histogram of free sulfur dioxide content.
+ggplot(aes(x = free.sulfur.dioxide, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = 3, color = 'black') +
+  xlab('Free sulfur dioxide, range 0 to 75.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(0, 75, 15), lim = c(0, 75))
+```
+\
+\
+
+An interesting trend is developing, as this pH table shows, the range of pH
+shrinks as quality or rating increases. This is reinforcing the thought that a 
+fine median needs to be achieved for several variables to achieve quality.
+
+```{r echo=FALSE, pH_Rating, message=FALSE, warning=FALSE}
+ggplot(aes(x = pH, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = .03, color = 'black') +
+  xlab('Total pH as it relates to wine rating.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(2.8, 3.8, .2))
+```
+\
+\
+
+Here we can see that as alcohol (%) content rises the quality trends up as well.
+The process for higher alcohol content must not be easy or we would see many
+more Bad rating wines attempt to make up for low quality with high alcohol. Since
+higher alcohol content is related to quality, it may be a good idea.
+
+```{r echo=FALSE, Plot_Three1, warning=FALSE, message=FALSE}
+ggplot(aes(x = alcohol, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = .2, color = 'black') +
+  xlab('Alcohol content of wine, full range.') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(8, 14.5, .5))
+```
+\
+\
+
+# Bivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the data-set?
+
+It was not surprising seeing the correlation between quality and alcohol content
+but it was surprising that alcohol content was the only variable that showed any
+possible correlation to quality outright. I suspect that quality is a product of 
+more than two variables. Sulfur dioxide, both free and total, seem to play what
+may be the biggest part in white wines.
+
+#### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+It was observed that density is closely related to total sulfur dioxide and 
+residual sugar. Density, however, was not closely correlated with quality. This
+is interesting data points but seem to be only closely related to quality.
+
+#### What was the strongest relationship you found?
+
+The strongest relationship was between residual sugar and density with a 
+Pearson's R of 0.8389665 and 95% confidence interval. This makes perfect sense.
+As with a cup of hot tea, the more sugar added even after dissolved, clouds the
+tea. Most white wines trended towards lower residual sugar levels but still
+maintained high density. This would be due to total sulfur dioxide also having
+a strong correlation (0.5298813) to density as well. So two variable work at
+changing the density variable of white wine.
+\
+\
+
+# Multivariate Plots Section
+
+Here, I create a new table grouped by rating and free sulfur dioxide while
+showing the mean and median of total sulfur dioxide.
+
+```{r echo=TRUE, Make_Multvariate_Table, message=FALSE, warning=FALSE}
+wineQuality.tsd_by_rating_fsd <- wineQuality %>%
+  group_by(rating, free.sulfur.dioxide) %>%
+  summarise(mean_tsd = mean(total.sulfur.dioxide),
+            .groups = "drop",
+            median_tsd = median(total.sulfur.dioxide),
+            n = n()) %>%
+  arrange(rating)
+```
+\
+\
+
+The relationship between free and total sulfur dioxide is interesting. The mean
+and median total sulfur dioxide are equal while free sulfur dioxide also float in
+the perfect mean of free sulfur dioxide for and Excellent rating. As seen in the 
+following tables, the Excellent rated wines are perfect with mean and median while 
+within free sulfur dioxide range of 24 and 57. But, the other rated wines do not
+quite share these qualities. What is also interesting, take notice that if the 
+mean and median of total sulfur dioxide are equal while within the free sulfur 
+dioxide range of 24 and 57, the count is either 1 or 2.
+
+```{r echo=FALSE, Table1, message=FALSE, warning=FALSE}
+kable(subset(wineQuality.tsd_by_rating_fsd, 
+               wineQuality.tsd_by_rating_fsd$rating == 'Average' & 
+               wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide >= 24 & 
+               wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide <= 57))
+```
+
+```{r echo=FALSE, Table2, message=FALSE, warning=FALSE}
+kable(subset(wineQuality.tsd_by_rating_fsd, 
+             wineQuality.tsd_by_rating_fsd$rating == 'Good'
+             & wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide >= 24 &
+               wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide <= 57))
+```
+
+```{r echo=FALSE, Table3, message=FALSE, warning=FALSE}
+kable(subset(wineQuality.tsd_by_rating_fsd, 
+             wineQuality.tsd_by_rating_fsd$rating == 'Great'
+             & wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide >= 24 &
+               wineQuality.tsd_by_rating_fsd$free.sulfur.dioxide <= 57))
+```
+
+```{r echo=FALSE, Table4, message=FALSE, warning=FALSE}
+kable(subset(wineQuality.tsd_by_rating_fsd, 
+             wineQuality.tsd_by_rating_fsd$rating == 'Excellent'))
+```
+\
+\
+
+"In winemaking, the use of sulfur dioxide (SO2) is critical. We tend to talk a 
+lot about free SO2 (FSO2) in particular, and not without good reason. The FSO2 
+and the pH of your wine determine how much SO2 is available in the active, molecular 
+form to help protect the wine from oxidation and spoilage. FSO2 is also something 
+we have to keep a close eye on, because it can be hard to predict how much will 
+be lost, and at what rate, to binding or to aeration. Too much FSO2 can be perceptible 
+to consumers, by masking the wine’s own fruity aromas and inhibiting its ability 
+to undergo the cascade of oxygen-using reactions that happen when it “breathes,” 
+or, in high enough concentrations, by contributing a sharp/bitter/metallic/chemical 
+flavor or sensation."
+
+Moroney, M. (2018, February 27). Total sulfur dioxide - why it matters, too! 
+Retrieved March 04, 2021, from 
+https://www.extension.iastate.edu/wine/total-sulfur-dioxide-why-it-matters-too
+
+This confirms what I believe to be seeing but I do not believe to be the total
+story. Sulfur dioxide seems to set the tone for the senses, such as smell and
+taste but I also want to unlock what relation alcohol content plays in quality 
+or if it's something of a coincidence. Otherwise put, do the same qualities that
+make a white wine Great or Excellent, coincidentally also make the wine rich in
+alcohol content or do the folks in the sample just prefer to get "drunker, quicker".
+\
+\
+
+I also create a new data set for total and free sulfur dioxide by alcohol content.
+
+```{r echo=TRUE, Make_Multvariate_Table1, message=FALSE, warning=FALSE}
+wineQuality.tsd_by_alcohol <- wineQuality %>%
+  group_by(alcohol, free.sulfur.dioxide, rating) %>%
+  summarise(mean_tsd = mean(total.sulfur.dioxide),
+            .groups = "drop",
+            median_tsd = median(total.sulfur.dioxide),
+            n = n()) %>%
+  arrange(alcohol)
+```
+\
+\
+
+Here we also see the equal relationship between mean and median while the free
+sulfur dioxide also, mostly, floats within the tight range of 24 to 57, which
+is the Excellent quantile range for free sulfur dioxide examined earlier.
+Interestingly, just as there are only five 9(Excellent) rating wines, the highest
+alcohol content white wines share the same characteristics observed for 9(Excellent)
+white wines.
+
+```{r echo=FALSE, TSD_by_alcohol, message=FALSE, warning=FALSE}
+kable(tail(wineQuality.tsd_by_alcohol))
+```
+\
+\
+
+Will examine the top four correlations.
+
+Residual sugar and density.
+
+```{r echo=FALSE, COR_RS_DE, message=FALSE, warning=FALSE}
+with(subset(wineQuality, quality > 5), cor.test(wineQuality$residual.sugar, 
+                                                wineQuality$density, 
+                                                method = 'pearson'))
+```
+
+```{r echo=FALSE, RS_DE, message=FALSE, warning=FALSE}
+ggplot(aes(x = residual.sugar, y = density, group = 1, color = rating),
+       data = subset(wineQuality, quality > 6)) +
+       xlim(.6,10) +
+       ylim(.987,.9955) +
+  xlab('Residual Sugar') +
+  ylab('Density') +
+  geom_point() +
+  geom_smooth(method = 'lm', color = 'blue')
+```
+\
+\
+
+Total sulfur dioxide and free sulfur dioxide.
+
+```{r echo=FALSE, COR_TSD_FSD, message=FALSE, warning=FALSE}
+with(subset(wineQuality, quality > 5), cor.test(wineQuality$total.sulfur.dioxide,
+                                                wineQuality$free.sulfur.dioxide,
+                                                method = 'pearson'))
+```
+
+```{r echo=FALSE, FSD_TSD, message=FALSE, warning=FALSE}
+ggplot(aes(x = free.sulfur.dioxide, y = total.sulfur.dioxide, group = 1, 
+           color = rating),
+       data = subset(wineQuality, quality > 6)) +
+       ylim(0, 275) +
+       xlim(0, 100) +
+  xlab('Free Sulfur Dioxide') +
+  ylab('Total Sulfur Dioxide') +
+  geom_point() +
+  geom_smooth(method = 'lm', color = 'blue')
+```
+\
+\
+
+Total sulfur dioxide and density.
+
+```{r echo=FALSE, COR_TSD_DE, message=FALSE, warning=FALSE}
+with(subset(wineQuality, quality > 5), cor.test(wineQuality$total.sulfur.dioxide, 
+                                               wineQuality$density,
+                                               method = 'pearson'))
+```
+
+```{r echo=FALSE, TSD_DE, message=FALSE, warning=FALSE}
+ggplot(aes(x = total.sulfur.dioxide, y = density, group = 1, color = rating),
+       data = subset(wineQuality, quality > 6)) +
+       ylim(.987,1.000) +
+       xlim(0, 275) +
+  xlab('Total Sulfur Dioxide') +
+  ylab('Density') +
+  geom_point() +
+  geom_smooth(method = 'lm', color = 'blue')
+```
+\
+\
+
+Alcohol and quality.
+
+```{r echo=FALSE, COR_A_Q, message=FALSE, warning=FALSE}
+with(subset(wineQuality, quality > 5), cor.test(wineQuality$alcohol, 
+                                               wineQuality$quality,
+                                               method = 'pearson'))
+```
+
+```{r echo=FALSE, A_Q, message=FALSE, warning=FALSE}
+ggplot(aes(x = pH, y = alcohol, group = 1, color = rating),
+       data = subset(wineQuality, quality > 6)) +
+       xlim(2.75,3.75) +
+       ylim(7.5,14.5) +
+  xlab('pH') +
+  ylab('Alcohol Content') +
+  geom_point() +
+  geom_smooth(method = 'lm', color = 'blue')
+```
+\
+\
+
+This table attempts to show the relation between free and total sulfur dioxides
+while showing how the window for quality decreases to a smaller window through
+box-plots.
+
+``` {r echo=FALSE, chart5, message=FALSE, warning=FALSE}
+ggplot(aes(x = free.sulfur.dioxide, y = median_tsd),
+       data = wineQuality.tsd_by_rating_fsd) +
+       xlim(0,125) +
+       ylim(0,300) +
+  xlab('Free Sulfur Dioxide') +
+  ylab('Median Total Sulfur Dioxide') +
+  geom_boxplot(aes(color = rating)) +
+  geom_smooth(method = 'lm', color = 'orange')
+```
+\
+\
+
+Showing the relation of total sulfur dioxide to alcohol content while showing
+quality ranges through boxplots. The amount of total sulfur dioxide is very 
+specific when achieving quality.
+
+``` {r echo=FALSE, chart6, message=FALSE, warning=FALSE}
+ggplot(aes(x = alcohol, y = median_tsd),
+       data = wineQuality.tsd_by_alcohol) +
+       xlim(8,14) +
+       ylim(0,300) +
+  xlab('Alcohol') +
+  ylab('Median Total Sulfur Dioxide') +
+  geom_boxplot(aes(color = rating)) +
+  geom_smooth(method = 'lm', color = 'orange')
+```
+\
+\
+
+# Multivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+Total sulfur dioxide and free sulfur dioxide are very key in creating an
+Excellent glass of wine. They are closely linked and there is a very tight
+range for perfection. Generally, total sulfur dioxide must be within 85 and 39.
+While free sulfur dioxide must be within 24 and 57. This only makes a Good glass.
+Excellence is achieved by hitting the median in both of those respective variables.
+
+#### Were there any interesting or surprising interactions between features?
+
+Alcohol content is interesting. I do not believe it to be a coincidence that
+alcohol is higher in better quality wine. This is a very delicate balance between
+chemical variables that requires masterful skill. I say this because of almost
+5000 samples, only 5 made Excellent. If one can achieve that Excellent rating, 
+then the chemical variables will interact perfectly, which will show in every
+aspect of the wine, including alcohol. I will speak more on this in reflection.
+
+------
+
+# Final Plots and Summary
+
+## Plot One
+```{r echo=FALSE, Plot_One, warning=FALSE, message=FALSE}
+ggplot(aes(x = pH, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = .03, color = 'black') +
+  ggtitle('Total pH as it relates to wine rating') +
+  xlab('pH') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(2.8, 3.8, .2))
+```
+
+#### Description One
+
+I found this interesting because this represents an avenue I did not venture down.
+I see the levels of pH change in a very noticeable way as quality goes up. This
+would make me think there is also an attachment of pH to quality as I see the 
+range for 9(Excellent) is very small.
+\
+\
+
+## Plot Two
+``` {r echo=FALSE, Plot_Two, warning=FALSE, message=FALSE}
+ggplot(aes(x = free.sulfur.dioxide, y = median_tsd),
+       data = wineQuality.tsd_by_rating_fsd) +
+       xlim(0,125) +
+       ylim(0,300) +
+  ggtitle('Free Sulfur Dioxide Compared to Mean Total Sulfur Dioxide w/ Rating') +
+  xlab('Free Sulfur Dioxide (mg / dm^3)') +
+  ylab('Median Total Sulfur Dioxide (mg / dm^3)') +
+  geom_boxplot(aes(color = rating)) +
+  geom_smooth(method = 'lm', color = 'orange')
+```
+
+
+#### Description Two
+
+This chart reinforces the connection between total and free sulfur dioxide and
+how the ranges decrease as quality goes up. A very specific range, or balance, 
+is needed of free and total sulfur dioxides to achieve quality. Even the outliers
+range shortens as quality rises creating less chances of achieving quality if 
+the balance is not maintained.
+\
+\
+
+## Plot Three
+```{r echo=FALSE, Plot_Three, warning=FALSE, message=FALSE}
+ggplot(aes(x = alcohol, fill = rating), data = wineQuality) +
+  geom_histogram(binwidth = .2, color = 'black') +
+  ggtitle('Alcohol Content by Rating.') +
+  xlab('Alcohol content (%) of wine') +
+  ylab('Number of wines in sample.') +
+  scale_x_continuous(breaks = seq(8, 14.5, .5))
+```
+
+#### Description Three
+
+This chart reinforced my thought that alcohol content is a by product of quality.
+This chart, I feel, embodies the complex chemistry it takes to make an excellent 
+glass of white wine, as well. In making a "Bad" glass of wine, the chemical 
+equation has broken down and it makes sense that the same chemical equation would
+not achieve higher alcohol content as alcohol content.
+
+\
+
+# Reflection
+
+It occurred to me, where the reference is in the report, that I don't know any
+where near enough about what exactly merits an excellent glass of wine. I Googled,
+I read, sulfur dioxide is important, as I found, but it's the process that is really
+key. That process with time variables measured against these same chemical variables 
+would, likely, yield more useful data in determining what makes quality. With that
+said, I think before one could have an understanding of how to make usefulness of
+this data, you need to understand much about the white wine making process.
+
+Alcohol content was surprising. I was expecting to find more correlation than 
+only to quality. Mostly I was expecting some link to residual sugar as I read
+sugars play a part in fermentation. My assumption is that as residual, it is not
+relating to alcohol. Perhaps if I knew how much was used in creation, I could
+find a correlation to alcohol content but residual sugar seems to be what was
+left over from the fermentation process. This also makes sense as to why
+residual sugar does correlate to density. I believe there may have been more
+interesting data points to explore here!
